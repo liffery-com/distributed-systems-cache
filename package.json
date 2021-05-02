@@ -15,7 +15,10 @@
     "prepublishOnly": "npm run lint && npm run build && npm run test"
   },
   "author": "John Carmichael",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/johndcarmichael/distributed-systems-cache.git"
+  },
   "dependencies": {
     "async-redis-shared": "^0.2.1"
   },
