@@ -1,6 +1,6 @@
 {
   "name": "distributed-systems-cache",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "distributed-systems-cache",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -10,9 +10,9 @@
     "lint": "eslint 'src/**/*.{js,ts,tsx}'",
     "lint:fix": "eslint 'src/**/*.{js,ts,tsx}' --quiet --fix",
     "test": "npm run build && npm run lint && npm run test:unit",
-    "test:unit": "ENVIRONMENT=test && jest --silent --runInBand",
+    "test:unit": "ENVIRONMENT=test && jest --verbose --runInBand --forceExit --detectOpenHandles",
     "test:unit:single": "ENVIRONMENT=test && jest --collect-coverage false --verbose --forceExit --detectOpenHandles",
-    "prepublishOnly": "npm run lint && npm run build && npm run test"
+    "prepublishOnly": "npm run lint && npm run test && npm run build"
   },
   "author": "John Carmichael",
   "repository": {

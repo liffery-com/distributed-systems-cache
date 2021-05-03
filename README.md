@@ -43,3 +43,9 @@ PermissionsCache.get('admin')
 
 PermissionsCache.set('admin': { permissions: ['write', 'read'] })
 ```
+
+## Developers
+
+See start at the unit tests:  `src/__tests__/DistributedSystemsCache.spec.ts`
+Additionally, to run the tests you need redis running on local host for now. 
+But you cannot publish unless the tests pass 

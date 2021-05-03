@@ -8,9 +8,7 @@ module.exports = {
   ],
   collectCoverage: true,
   collectCoverageFrom: [
-    'src/domains/*.{js,ts}',
-    'src/services/*.{js,ts}',
-    'src/utils/*.{js,ts}',
+    'src/**/*.{js,ts}',
   ],
   coverageDirectory: 'coverage',
   transform: {
