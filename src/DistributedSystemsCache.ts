@@ -1,10 +1,10 @@
 import client from 'async-redis-shared';
 
-interface IDistributedSystemsCache {
+export interface IDistributedSystemsCache {
   verboseLog?: boolean,
   cacheKeyPrefix: string,
   cacheMaxAgeMs?: number,
-  cachePopulator: () => void,
+  cachePopulator?: (identifier?: string) => void,
   cachePopulatorMsGraceTime?: number,
   cachePopulatorMaxTries?: number,
 }
@@ -13,14 +13,17 @@ export class DistributedSystemsCache<T> {
   verboseLog = false;
   cacheKeyPrefix: string;
   cacheMaxAgeMs: number = 24 * 60 * 60 * 1000; // default is 1 day
-  cachePopulator: (identifier: string) => void;
+  cachePopulator: (identifier?: string) => void;
   cachePopulatorMaxTries = 1;
   cachePopulatorMsGraceTime = 150;
 
   constructor (input: IDistributedSystemsCache) {
+    if (!input.cacheKeyPrefix || input.cacheKeyPrefix === '') {
+      throw new Error('DistributedSystemsCache constructor called; the cacheKeyPrefix cannot be an empty string or undefined')
+    }
     this.cacheKeyPrefix = input.cacheKeyPrefix;
     this.cacheMaxAgeMs = input.cacheMaxAgeMs || this.cacheMaxAgeMs;
-    this.cachePopulator = input.cachePopulator;
+    this.cachePopulator = input.cachePopulator || this.cachePopulator;
     this.cachePopulatorMsGraceTime = input.cachePopulatorMsGraceTime || this.cachePopulatorMsGraceTime;
     this.cachePopulatorMaxTries = input.cachePopulatorMaxTries || this.cachePopulatorMaxTries;
     this.verboseLog = input.verboseLog || false;
