@@ -43,16 +43,21 @@ export class DistributedSystemsCache<T> {
     });
   }
 
-  private cacheTooOld (timeStamp: number): boolean {
-    return (new Date().getTime() - timeStamp) > this.cacheMaxAgeMs;
-  }
-
   private async validateAgeAndFetch (cacheKey: string, json: T & { updatedAt: number }): Promise<void> {
-    if (this.cacheTooOld(json.updatedAt)) {
+    if (this.cacheTooOld(json.updatedAt, this.cacheMaxAgeMs)) {
       this.logger('getCache age check too old', { updatedAt: json.updatedAt });
       await this.clearCacheRecord(cacheKey);
       await this.cachePopulator(cacheKey);
     }
+  }
+
+  /**
+   * Determines is a cache object is too old or not
+   * @param timeStamp The internal cache updatedAt entry
+   * @param cacheMaxAgeMs -1 is equivalent to infinite
+   */
+  cacheTooOld (timeStamp: number, cacheMaxAgeMs: number): boolean {
+    return cacheMaxAgeMs > -1 ? (new Date().getTime() - timeStamp) > cacheMaxAgeMs : false;
   }
 
   async setCache (cacheKey: string, cacheObject: T): Promise<void> {

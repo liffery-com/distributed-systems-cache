@@ -21,6 +21,20 @@ beforeAll(async () => {
   await client().flushdb();
 });
 
+it('too old should return true', async () => {
+  expect(permissionCache.cacheTooOld(321654, 24 * 60 * 60 * 1000)).toBe(true);
+});
+
+it('too old should return false', async () => {
+  const now = new Date().getTime();
+  expect(permissionCache.cacheTooOld(now, 24 * 60 * 60 * 1000)).toBe(false);
+});
+
+it('too old should return false', async () => {
+  const now = new Date().getTime();
+  expect(permissionCache.cacheTooOld(now, -1)).toBe(false);
+});
+
 it('should add a cache value, and fetch back ok', async () => {
   await permissionCache.setCache('dummy1', { permissions: ['abc', 'def'] });
   const cache = await permissionCache.getCache('dummy1');

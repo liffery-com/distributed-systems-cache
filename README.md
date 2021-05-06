@@ -24,14 +24,28 @@ Set a cache, get a cache, define the cache object shape.
 ## API
 #### construct
 You must initialise before calling another of the other methods, here are all the options:
-```
-{  
-  verboseLog?: boolean, // when true logs a lot to the console, nice for development
-  cacheKeyPrefix: string, // The cache key prefix, you might use 1 redix index for multiple key types, eg "permissions:"
-  cacheMaxAgeMs?: number, // In milliseconds, what is the max age of the cache? the default is 1 day, 24 * 60 * 60 * 1000
-  cachePopulator?: (identifier?: string) => void, // The function called when the cache is too old or not found
-  cachePopulatorMsGraceTime?: number, // The time in ms between calling the cachePopulator and then trying to fetch the cache again, default is 150ms
-  cachePopulatorMaxTries?: number // The number of times the cache populator will be called for a cache key, after the max an error is thrown
+``` javascript
+{
+  /* when true logs a lot to the console, nice for development */
+  verboseLog?: boolean, 
+  
+  /* The cache key prefix, you might use 1 redix index for multiple key types, eg "permissions:" */
+  cacheKeyPrefix: string, 
+
+  /*
+   * In milliseconds, what is the max age of the cache? the default is 1 day, 24 * 60 * 60 * 1000.
+   * Set to -1 for infinate, ie noe max age
+   */
+  cacheMaxAgeMs?: number, 
+
+  /* The function called when the cache is too old or not found */
+  cachePopulator?: (identifier?: string) => void,
+
+  /* The time in ms between calling the cachePopulator and then trying to fetch the cache again, default is 150ms */
+  cachePopulatorMsGraceTime?: number,
+
+  /* The number of times the cache populator will be called for a cache key, after the max an error is thrown */
+  cachePopulatorMaxTries?: number
 }
 ```
 Here is an example: [Connect first somewhere in your app](#connect-first-somewhere-in-your-app)
