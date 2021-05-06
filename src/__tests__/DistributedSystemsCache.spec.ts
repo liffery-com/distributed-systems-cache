@@ -9,7 +9,7 @@ let cachePopulatorCalled = false;
 const permissionCache = new DistributedSystemsCache<MsRolesPermissionsRole>({
   verboseLog: true,
   cacheKeyPrefix: 'RolesPermissionsCache:',
-  cachePopulator: () => {
+  cachePopulator: async () => {
     cachePopulatorCalled = true;
   }
 });
@@ -19,15 +19,6 @@ beforeAll(async () => {
     db: 0
   });
   await client().flushdb();
-});
-
-it('too old should return true', async () => {
-  expect(permissionCache.cacheTooOld(321654)).toBe(true);
-});
-
-it('too old should return false', async () => {
-  const now = new Date().getTime();
-  expect(permissionCache.cacheTooOld(now)).toBe(false);
 });
 
 it('should add a cache value, and fetch back ok', async () => {

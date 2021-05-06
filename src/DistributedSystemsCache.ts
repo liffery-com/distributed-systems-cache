@@ -4,7 +4,7 @@ export interface IDistributedSystemsCache {
   verboseLog?: boolean,
   cacheKeyPrefix: string,
   cacheMaxAgeMs?: number,
-  cachePopulator?: (identifier?: string) => void,
+  cachePopulator?: (identifier?: string) => Promise<void>,
   cachePopulatorMsGraceTime?: number,
   cachePopulatorMaxTries?: number,
 }
@@ -13,13 +13,13 @@ export class DistributedSystemsCache<T> {
   verboseLog = false;
   cacheKeyPrefix: string;
   cacheMaxAgeMs: number = 24 * 60 * 60 * 1000; // default is 1 day
-  cachePopulator: (identifier?: string) => void;
+  cachePopulator: (identifier?: string) => Promise<void>;
   cachePopulatorMaxTries = 1;
   cachePopulatorMsGraceTime = 150;
 
   constructor (input: IDistributedSystemsCache) {
     if (!input.cacheKeyPrefix || input.cacheKeyPrefix === '') {
-      throw new Error('DistributedSystemsCache constructor called; the cacheKeyPrefix cannot be an empty string or undefined')
+      throw new Error('DistributedSystemsCache constructor called; the cacheKeyPrefix cannot be an empty string or undefined');
     }
     this.cacheKeyPrefix = input.cacheKeyPrefix;
     this.cacheMaxAgeMs = input.cacheMaxAgeMs || this.cacheMaxAgeMs;
@@ -29,9 +29,29 @@ export class DistributedSystemsCache<T> {
     this.verboseLog = input.verboseLog || false;
   }
 
-  logger (msg: string, toLog: Record<any, any>): void {
+  private logger (msg: string, toLog: Record<any, any>): void {
     if (this.verboseLog) {
       console.log(`${this.cacheKeyPrefix}: ${msg}`, toLog);
+    }
+  }
+
+  private pause (): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve();
+      }, this.cachePopulatorMsGraceTime);
+    });
+  }
+
+  private cacheTooOld (timeStamp: number): boolean {
+    return (new Date().getTime() - timeStamp) > this.cacheMaxAgeMs;
+  }
+
+  private async validateAgeAndFetch (cacheKey: string, json: T & { updatedAt: number }): Promise<void> {
+    if (this.cacheTooOld(json.updatedAt)) {
+      this.logger('getCache age check too old', { updatedAt: json.updatedAt });
+      await this.clearCacheRecord(cacheKey);
+      await this.cachePopulator(cacheKey);
     }
   }
 
@@ -43,14 +63,6 @@ export class DistributedSystemsCache<T> {
       })
     );
     this.logger('setCache', cacheObject);
-  }
-
-  pause (): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, this.cachePopulatorMsGraceTime);
-    });
   }
 
   async getCache (cacheKey: string, fetchAttempt = 0): Promise<T> {
@@ -65,28 +77,22 @@ export class DistributedSystemsCache<T> {
       }
       ++fetchAttempt;
       this.logger('getCache call to populate called', { cacheKey, fetchAttempt });
-      this.cachePopulator(cacheKey);
+      await this.cachePopulator(cacheKey);
 
       await this.pause();
       return this.getCache(cacheKey, fetchAttempt);
     } else {
       // handle the cache hit
       this.logger('getCache hit', json);
-      if (this.cacheTooOld(json.updatedAt)) {
-        this.logger('getCache age check too old', { updatedAt: json.updatedAt });
-        await this.clearCacheRecord(cacheKey);
-        this.cachePopulator(cacheKey);
-      }
+      this.validateAgeAndFetch(cacheKey, json).catch((e) => {
+        console.error('Error validating and refreshing the cache:', this.cacheKeyPrefix + cacheKey, json, e);
+      });
       return json;
     }
   }
 
   getAll (): Promise<any> {
     return client().keys(this.cacheKeyPrefix + '*');
-  }
-
-  cacheTooOld (timeStamp: number): boolean {
-    return (new Date().getTime() - timeStamp) > this.cacheMaxAgeMs;
   }
 
   clearCacheRecord (cacheKey: string): Promise<boolean> {

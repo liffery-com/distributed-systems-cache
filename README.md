@@ -48,10 +48,12 @@ async setCache (cacheKey: string, cacheObject: T): Promise<void>
 Gets a cache by key (excluding the prefix, this is prepended automatically).
 If the cache key is not found, the `cachePopulator` callback is called. After the grace time, it will try and fetch the cache again...
 It will repeat this up until a cache hit is found, or the qty of tries is equal to the cachePopulatorMaxTries.
-Each cache hit is returned, and then the age of the cache is checked. If the cache is too old, the `cachePopulator` is called.
+Each cache hit is returned and validated/ refreshed.
 ```
 async getCache (cacheKey: string): Promise<T>
 ```
+NB: the `private validateAgeAndFetch` method is called, but the `getCache` doesn't `await` the response. Instead, the callee will only catch and error console a rejected promise at this point.
+
 #### Method: getAll
 Does what you would imagine, grabs all the cache values for a given key.
 
