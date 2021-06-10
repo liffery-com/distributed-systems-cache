@@ -77,7 +77,7 @@ export class DistributedSystemsCache<T> {
     if (!json) {
       this.logger('getCache null', { cacheKey, fetchAttempt });
       if (this.cachePopulatorMaxTries <= fetchAttempt) {
-        console.log('rejecting');
+        console.log('rejecting: ' + this.cacheKeyPrefix + cacheKey);
         throw new Error('No cache object found, cache not generated within the cachePopulatorMsGraceTime of ' + this.cachePopulatorMsGraceTime);
       }
       ++fetchAttempt;
