@@ -2,6 +2,7 @@ import client from 'async-redis-shared';
 
 export interface IDistributedSystemsCache {
   verboseLog?: boolean,
+  cacheDefaultValue?: any,
   cacheKeyPrefix: string,
   cacheMaxAgeMs?: number,
   cachePopulator?: (identifier?: string) => Promise<void>,
@@ -15,6 +16,13 @@ export class DistributedSystemsCache<T> {
    * Log or not
    */
   verboseLog = false;
+
+  /**
+   * The default cache value, if passed in.
+   * If the cache-populator fails, then the default value will be returned
+   * should the value be passed on setup, else an error is thrown
+   */
+  cacheDefaultValue?: T;
 
   /**
    * The prefix for this set of cache keys.
@@ -56,6 +64,7 @@ export class DistributedSystemsCache<T> {
     if (!input.cacheKeyPrefix || input.cacheKeyPrefix === '') {
       throw new Error('DistributedSystemsCache constructor called; the cacheKeyPrefix cannot be an empty string or undefined');
     }
+    this.cacheDefaultValue = input.cacheDefaultValue || this.cacheDefaultValue;
     this.cacheKeyPrefix = input.cacheKeyPrefix;
     this.cacheMaxAgeMs = input.cacheMaxAgeMs || this.cacheMaxAgeMs;
     this.cachePopulator = input.cachePopulator || this.cachePopulator;
@@ -96,6 +105,12 @@ export class DistributedSystemsCache<T> {
     return cacheMaxAgeMs > -1 ? (new Date().getTime() - timeStamp) > cacheMaxAgeMs : false;
   }
 
+  /**
+   * Sets the cache into the db, if the cacheSetFilter is provided to this instance on setup
+   * then the input will be run through this function
+   * @param cacheKey
+   * @param cacheObject
+   */
   async setCache (cacheKey: string, cacheObject: T): Promise<void> {
     if (this.cacheSetFilter) {
       cacheObject = this.cacheSetFilter(cacheObject);
@@ -109,6 +124,13 @@ export class DistributedSystemsCache<T> {
     this.logger('setCache', cacheObject);
   }
 
+  /**
+   * Gets a cache key, if the key is not found or is too old a new value will be requested.
+   * If no value is found after the request(s) then the default value will be returned
+   * If no default is provided on setup, an error is thrown
+   * @param cacheKey
+   * @param fetchAttempt
+   */
   async getCache (cacheKey: string, fetchAttempt = 0): Promise<T> {
     this.logger('getCache called', { cacheKey });
 
@@ -116,8 +138,12 @@ export class DistributedSystemsCache<T> {
     if (!json) {
       this.logger('getCache null', { cacheKey, fetchAttempt });
       if (this.cachePopulatorMaxTries <= fetchAttempt) {
-        console.log('rejecting: ' + this.cacheKeyPrefix + cacheKey);
-        throw new Error('No cache object found, cache not generated within the cachePopulatorMsGraceTime of ' + this.cachePopulatorMsGraceTime);
+        if (this.cacheDefaultValue) {
+          return this.cacheDefaultValue;
+        } else {
+          console.log('rejecting: ' + this.cacheKeyPrefix + cacheKey);
+          throw new Error('No cache object found, cache not generated within the cachePopulatorMsGraceTime of ' + this.cachePopulatorMsGraceTime);
+        }
       }
       ++fetchAttempt;
       this.logger('getCache call to populate called', { cacheKey, fetchAttempt });
@@ -135,14 +161,23 @@ export class DistributedSystemsCache<T> {
     }
   }
 
+  /**
+   * Simple get all for this prefix
+   */
   getAll (): Promise<any> {
     return client().keys(this.cacheKeyPrefix + '*');
   }
 
+  /**
+   * Simple clear 1 record under this prefix
+   */
   clearCacheRecord (cacheKey: string): Promise<boolean> {
     return client().del(this.cacheKeyPrefix + cacheKey);
   }
 
+  /**
+   * Crude, clear all records under this prefix
+   */
   async clearAllCacheRecords (): Promise<void> {
     const keys = await this.getAll();
     for (let i = 0; i < keys.length; i++) {
