@@ -7,15 +7,50 @@ export interface IDistributedSystemsCache {
   cachePopulator?: (identifier?: string) => Promise<void>,
   cachePopulatorMsGraceTime?: number,
   cachePopulatorMaxTries?: number,
+  cacheSetFilter?: (input: any) => any
 }
 
 export class DistributedSystemsCache<T> {
+  /**
+   * Log or not
+   */
   verboseLog = false;
+
+  /**
+   * The prefix for this set of cache keys.
+   * Required when using 1 redis index for multiple cache record types
+   */
   cacheKeyPrefix: string;
+
+  /**
+   * The max age 1 cache record is premitted to live for. Once
+   * older than this value, the cachePopulator will be called.
+   * Set to -1 for no limit
+   */
   cacheMaxAgeMs: number = 24 * 60 * 60 * 1000; // default is 1 day
+
+  /**
+   * A function injected on setup that will be called to populate
+   * a cache value should one not be found
+   */
   cachePopulator: (identifier?: string) => Promise<void>;
-  cachePopulatorMaxTries = 1;
+
+  /**
+   * The defualt number of tries before the getCache will call the cachePopulate
+   * before throwing an error
+   */
+  cachePopulatorMaxTries = 3;
+
+  /**
+   * The amount of time the recursive function will wait before checking
+   * the if th cache is ready again
+   */
   cachePopulatorMsGraceTime = 150;
+
+  /**
+   * When present the input will be run through this injectable function
+   */
+  cacheSetFilter?: (input: T) => T;
 
   constructor (input: IDistributedSystemsCache) {
     if (!input.cacheKeyPrefix || input.cacheKeyPrefix === '') {
@@ -26,16 +61,17 @@ export class DistributedSystemsCache<T> {
     this.cachePopulator = input.cachePopulator || this.cachePopulator;
     this.cachePopulatorMsGraceTime = input.cachePopulatorMsGraceTime || this.cachePopulatorMsGraceTime;
     this.cachePopulatorMaxTries = input.cachePopulatorMaxTries || this.cachePopulatorMaxTries;
+    this.cacheSetFilter = input.cacheSetFilter || this.cacheSetFilter;
     this.verboseLog = input.verboseLog || false;
   }
 
-  private logger (msg: string, toLog: Record<any, any>): void {
+  logger (msg: string, toLog: Record<any, any>): void {
     if (this.verboseLog) {
       console.log(`${this.cacheKeyPrefix}: ${msg}`, toLog);
     }
   }
 
-  private pause (): Promise<void> {
+  pause (): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve();
@@ -43,7 +79,7 @@ export class DistributedSystemsCache<T> {
     });
   }
 
-  private async validateAgeAndFetch (cacheKey: string, json: T & { updatedAt: number }): Promise<void> {
+  async validateAgeAndFetch (cacheKey: string, json: T & { updatedAt: number }): Promise<void> {
     if (this.cacheTooOld(json.updatedAt, this.cacheMaxAgeMs)) {
       this.logger('getCache age check too old', { updatedAt: json.updatedAt });
       await this.clearCacheRecord(cacheKey);
@@ -61,6 +97,9 @@ export class DistributedSystemsCache<T> {
   }
 
   async setCache (cacheKey: string, cacheObject: T): Promise<void> {
+    if (this.cacheSetFilter) {
+      cacheObject = this.cacheSetFilter(cacheObject);
+    }
     await client().setJson(
       this.cacheKeyPrefix + cacheKey,
       Object.assign(cacheObject, {
