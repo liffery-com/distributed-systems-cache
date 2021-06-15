@@ -6,6 +6,7 @@ Set a cache, get a cache, define the cache object shape.
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
+- [Overview](#overview)
 - [API](#api)
     - [construct](#construct)
     - [Method: setCache](#method-setcache)
@@ -21,33 +22,17 @@ Set a cache, get a cache, define the cache object shape.
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
+## Overview
+- All content is expected to be a js object so everything is stringified on input and parsed on output.
+- All keys run through a regex check, ie the bit after the cache key prefix. This regex has a default but can be injected on setup.
+- All objects can be passed through a function to filter the persisted content, this must be injected on setup, else nothing is filtered.
+- All keys not found will be requested via the injected call to populate on setup, this can be anything from a RMQ call or REST or some arbitrary DB aggregation.
+- !Important: the call to populate function should call the setCache on its own, or trigger your application to do so, the response from the call to populate is expected to be void.
+
 ## API
 #### construct
-You must initialise before calling another of the other methods, here are all the options:
-``` javascript
-{
-  /* when true logs a lot to the console, nice for development */
-  verboseLog?: boolean, 
-  
-  /* The cache key prefix, you might use 1 redix index for multiple key types, eg "permissions:" */
-  cacheKeyPrefix: string, 
+You must initialise before calling another of the other methods, here are all the options from the source code:  src/DistributedSystemsCache.ts
 
-  /*
-   * In milliseconds, what is the max age of the cache? the default is 1 day, 24 * 60 * 60 * 1000.
-   * Set to -1 for infinate, ie noe max age
-   */
-  cacheMaxAgeMs?: number, 
-
-  /* The function called when the cache is too old or not found */
-  cachePopulator?: (identifier?: string) => void,
-
-  /* The time in ms between calling the cachePopulator and then trying to fetch the cache again, default is 150ms */
-  cachePopulatorMsGraceTime?: number,
-
-  /* The number of times the cache populator will be called for a cache key, after the max an error is thrown */
-  cachePopulatorMaxTries?: number
-}
-```
 Here is an example: [Connect first somewhere in your app](#connect-first-somewhere-in-your-app)
 
 
@@ -73,13 +58,13 @@ Does what you would imagine, grabs all the cache values for a given key.
 
 #### Method: clearCacheRecord
 Does what you would imagine, for a given cache key, it removes it (as usual, the prefix is added internally):
-```
+```typescript
 await distributedSystemsCache.clearCacheRecord('admin')
 ```
 
 #### Method: clearAllCacheRecords
 Does what you would imagine, clears all records for instantiated prefix:
-```
+```typescript
 await distributedSystemsCache.clearAllCacheRecords()
 ```
 
@@ -88,7 +73,7 @@ await distributedSystemsCache.clearAllCacheRecords()
 Currently this requires the use of async-redis-shared.
 
 #### Connect first somewhere in your app
-```
+```typescript
 import { connect } from 'distributed-systems-cache';
 
 // from https://www.npmjs.com/package/async-redis-shared
@@ -98,7 +83,7 @@ await connect({
 ```
 
 #### Set a model up `PermissionsCache.ts`
-```
+```typescript
 import { DistributedSystemsCache } from 'distributed-systems-cache'
 
 // the cache definition
@@ -109,9 +94,22 @@ export interface MsRolesPermissionsRole {
 // instantiate, declaring the cachePopulator and cacheKeyPrefix
 export default new DistributedSystemsCache<MsRolesPermissionsRole>({
   cacheKeyPrefix: 'RolesPermissionsCache:',
+  cacheKeyReplaceRegex: new Regex(/:/gm), // replace the default to only replace :
+  cacheKeyReplaceWith: '-', // replace the default _ with -
   cachePopulator: () => {
     RabbitMQService.msRolesPermissionsRolesRequest({
       fromService: packageJson.name
+    });
+  },
+  cacheMaxAgeMs: 1000 * 60 * 60 * 24 * 7, // 1 week life
+  cachePopulatorMsGraceTime: 200,
+  cachePopulatorMaxTries: 3,
+  // Ensuring that we only persist what we need
+  cacheSetFilter: (input: any): MsRolesPermissionsRole => {
+    return input.map((input: any) => {
+      return {
+        permissions: input.permissions,
+      };
     });
   }
 });

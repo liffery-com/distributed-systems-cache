@@ -4,6 +4,8 @@ export interface IDistributedSystemsCache {
   verboseLog?: boolean,
   cacheDefaultValue?: any,
   cacheKeyPrefix: string,
+  cacheKeyReplaceRegex?: RegExp,
+  cacheKeyReplaceWith?: string,
   cacheMaxAgeMs?: number,
   cachePopulator?: (identifier?: string) => Promise<void>,
   cachePopulatorMsGraceTime?: number,
@@ -29,6 +31,17 @@ export class DistributedSystemsCache<T> {
    * Required when using 1 redis index for multiple cache record types
    */
   cacheKeyPrefix: string;
+
+  /**
+   * A RegExp object that will be used to alter the cache keys.
+   * The default replaces all @ and / characters
+   */
+  cacheKeyReplaceRegex = new RegExp(/\/|@|:/gm);
+
+  /**
+   * Each of the reaplce values will be replace with this string
+   */
+  cacheKeyReplaceWith = '_';
 
   /**
    * The max age 1 cache record is premitted to live for. Once
@@ -66,6 +79,8 @@ export class DistributedSystemsCache<T> {
     }
     this.cacheDefaultValue = input.cacheDefaultValue || this.cacheDefaultValue;
     this.cacheKeyPrefix = input.cacheKeyPrefix;
+    this.cacheKeyReplaceRegex = input.cacheKeyReplaceRegex || this.cacheKeyReplaceRegex;
+    this.cacheKeyReplaceWith = input.cacheKeyReplaceWith || this.cacheKeyReplaceWith;
     this.cacheMaxAgeMs = input.cacheMaxAgeMs || this.cacheMaxAgeMs;
     this.cachePopulator = input.cachePopulator || this.cachePopulator;
     this.cachePopulatorMsGraceTime = input.cachePopulatorMsGraceTime || this.cachePopulatorMsGraceTime;
@@ -105,6 +120,10 @@ export class DistributedSystemsCache<T> {
     return cacheMaxAgeMs > -1 ? (new Date().getTime() - timeStamp) > cacheMaxAgeMs : false;
   }
 
+  makeKey (key: string): string {
+    return this.cacheKeyPrefix + key.replace(this.cacheKeyReplaceRegex, this.cacheKeyReplaceWith);
+  }
+
   /**
    * Sets the cache into the db, if the cacheSetFilter is provided to this instance on setup
    * then the input will be run through this function
@@ -116,7 +135,7 @@ export class DistributedSystemsCache<T> {
       cacheObject = this.cacheSetFilter(cacheObject);
     }
     await client().setJson(
-      this.cacheKeyPrefix + cacheKey,
+      this.makeKey(cacheKey),
       Object.assign(cacheObject, {
         updatedAt: new Date().getTime(),
       })
@@ -134,7 +153,7 @@ export class DistributedSystemsCache<T> {
   async getCache (cacheKey: string, fetchAttempt = 0): Promise<T> {
     this.logger('getCache called', { cacheKey });
 
-    const json: T & { updatedAt: number } = await client().getJson(this.cacheKeyPrefix + cacheKey);
+    const json: T & { updatedAt: number } = await client().getJson(this.makeKey(cacheKey));
     if (!json) {
       this.logger('getCache null', { cacheKey, fetchAttempt });
       if (this.cachePopulatorMaxTries <= fetchAttempt) {
@@ -172,7 +191,7 @@ export class DistributedSystemsCache<T> {
    * Simple clear 1 record under this prefix
    */
   clearCacheRecord (cacheKey: string): Promise<boolean> {
-    return client().del(this.cacheKeyPrefix + cacheKey);
+    return client().del(this.makeKey(cacheKey));
   }
 
   /**

@@ -21,6 +21,17 @@ beforeAll(async () => {
   await client().flushdb();
 });
 
+it('should calculate the correct key', async () => {
+  let key = permissionCache.makeKey('hello/world')
+  expect(key).toBe('RolesPermissionsCache:hello_world')
+
+  key = permissionCache.makeKey('hello//@world')
+  expect(key).toBe('RolesPermissionsCache:hello___world')
+
+  key = permissionCache.makeKey('http://www.google.com')
+  expect(key).toBe('RolesPermissionsCache:http___www.google.com')
+});
+
 it('too old should return true', async () => {
   expect(permissionCache.cacheTooOld(321654, 24 * 60 * 60 * 1000)).toBe(true);
 });
