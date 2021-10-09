@@ -13,7 +13,7 @@
     "test": "npm run build && npm run lint && npm run test:unit",
     "test:unit": "ENVIRONMENT=test && jest --verbose --runInBand --forceExit --detectOpenHandles",
     "test:unit:single": "ENVIRONMENT=test && jest --collect-coverage false --verbose --forceExit --detectOpenHandles",
-    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "prepublishOnly": "npm run version && npm run lint && npm run test && npm run build",
     "version": "auto-changelog -p"
   },
   "author": "John Carmichael",
