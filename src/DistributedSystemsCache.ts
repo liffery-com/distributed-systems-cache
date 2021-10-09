@@ -54,7 +54,9 @@ export class DistributedSystemsCache<T> {
    * A function injected on setup that will be called to populate
    * a cache value should one not be found
    */
-  cachePopulator: (identifier?: string) => Promise<void>;
+  cachePopulator: (identifier?: string) => Promise<void> = async () => {
+    // placeholder function
+  };
 
   /**
    * The defualt number of tries before the getCache will call the cachePopulate
