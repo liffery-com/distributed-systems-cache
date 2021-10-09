@@ -52,7 +52,7 @@ export class DistributedSystemsCache<T> {
 
   /**
    * A function injected on setup that will be called to populate
-   * a cache value should one not be found
+   * a cache value should one not be found.
    */
   cachePopulator: (identifier?: string) => Promise<void> = async () => {
     // placeholder function
