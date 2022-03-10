@@ -5,7 +5,7 @@
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "scripts": {
-    "build": "npm run readme:doctoc npm run build:clean && ttsc -p . -d --declarationDir build",
+    "build": "npm run readme:doctoc && npm run build:clean && ttsc -p . -d --declarationDir build",
     "build:clean": "rm -rf ./build",
     "readme:doctoc": "npx doctoc ./",
     "lint": "eslint 'src/**/*.{js,ts,tsx}'",
