@@ -1,11 +1,11 @@
 {
   "name": "distributed-systems-cache",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "distributed-systems-cache",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
   "scripts": {
-    "build": "npm run build:clean && ttsc -p . -d --declarationDir build",
+    "build": "npm run readme:doctoc npm run build:clean && ttsc -p . -d --declarationDir build",
     "build:clean": "rm -rf ./build",
     "readme:doctoc": "npx doctoc ./",
     "lint": "eslint 'src/**/*.{js,ts,tsx}'",
