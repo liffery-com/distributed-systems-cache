@@ -1,4 +1,5 @@
 import client from 'async-redis-shared';
+import ms from 'ms';
 
 export interface IDistributedSystemsCache {
   verboseLog?: boolean,
@@ -6,7 +7,7 @@ export interface IDistributedSystemsCache {
   cacheKeyPrefix: string,
   cacheKeyReplaceRegex?: RegExp,
   cacheKeyReplaceWith?: string,
-  cacheMaxAgeMs?: number,
+  cacheMaxAgeMs?: number | string,
   cachePopulator?: (identifier?: string) => Promise<void>,
   cachePopulatorMsGraceTime?: number,
   cachePopulatorMaxTries?: number,
@@ -83,12 +84,27 @@ export class DistributedSystemsCache<T> {
     this.cacheKeyPrefix = input.cacheKeyPrefix;
     this.cacheKeyReplaceRegex = input.cacheKeyReplaceRegex || this.cacheKeyReplaceRegex;
     this.cacheKeyReplaceWith = input.cacheKeyReplaceWith || this.cacheKeyReplaceWith;
-    this.cacheMaxAgeMs = input.cacheMaxAgeMs || this.cacheMaxAgeMs;
+    this.calculateCacheMaxAge(input.cacheMaxAgeMs);
     this.cachePopulator = input.cachePopulator || this.cachePopulator;
     this.cachePopulatorMsGraceTime = input.cachePopulatorMsGraceTime || this.cachePopulatorMsGraceTime;
     this.cachePopulatorMaxTries = input.cachePopulatorMaxTries || this.cachePopulatorMaxTries;
     this.cacheSetFilter = input.cacheSetFilter || this.cacheSetFilter;
     this.verboseLog = input.verboseLog || false;
+  }
+
+  calculateCacheMaxAge (input?: number | string): number {
+    switch (typeof input) {
+      case 'string':
+        const calculated = ms(input);
+        if (!calculated) {
+          throw new Error('distributed-systems-cache input.cacheMaxAgeMs was provided a string value that could not be converted to a millisecond timestamp');
+        }
+        return calculated;
+      case 'number':
+        return input;
+      default:
+        return this.cacheMaxAgeMs;
+    }
   }
 
   logger (msg: string, toLog: Record<any, any>): void {

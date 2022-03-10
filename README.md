@@ -127,6 +127,22 @@ PermissionsCache.get('admin')
 PermissionsCache.set('admin': { permissions: ['write', 'read'] })
 ```
 
+## cacheMaxAgeMs options
+The cacheMaxAgeMs option defaults to 1 day.
+
+You can change this by passing in your own millisecond time stamp.
+
+MS timestamps can be a pain to calculate, you can also pass a string which will be calculated via https://www.npmjs.com/package/ms
+
+eg:
+```typescript
+export default new DistributedSystemsCache<MsRolesPermissionsRole>({
+  cacheKeyPrefix: 'MyCache:',
+  cacheMaxAgeMs: '5 days',
+  cachePopulator: () => {  /* some populator */ },
+});
+```
+
 ## Developers
 
 Start at the unit tests:  `src/__tests__/DistributedSystemsCache.spec.ts`

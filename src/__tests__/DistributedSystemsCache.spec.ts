@@ -21,15 +21,33 @@ beforeAll(async () => {
   await client().flushdb();
 });
 
+it('calculateCacheMaxAge should return the default', () => {
+  expect(permissionCache.calculateCacheMaxAge()).toBe(24 * 60 * 60 * 1000);
+});
+it('calculateCacheMaxAge should return the given number', () => {
+  expect(permissionCache.calculateCacheMaxAge(1000)).toBe(1000);
+});
+it('calculateCacheMaxAge should return the number from string', () => {
+  expect(permissionCache.calculateCacheMaxAge('1d')).toBe(86400000);
+});
+it('calculateCacheMaxAge should throw an error when the input string is wrong', (done) => {
+  try {
+    permissionCache.calculateCacheMaxAge('not a valid string');
+    done('Should have thrown an error with the input of \'not a valid string\'');
+  } catch (e) {
+    done();
+  }
+});
+
 it('should calculate the correct key', async () => {
-  let key = permissionCache.makeKey('hello/world')
-  expect(key).toBe('RolesPermissionsCache:hello_world')
+  let key = permissionCache.makeKey('hello/world');
+  expect(key).toBe('RolesPermissionsCache:hello_world');
 
-  key = permissionCache.makeKey('hello//@world')
-  expect(key).toBe('RolesPermissionsCache:hello___world')
+  key = permissionCache.makeKey('hello//@world');
+  expect(key).toBe('RolesPermissionsCache:hello___world');
 
-  key = permissionCache.makeKey('http://www.google.com')
-  expect(key).toBe('RolesPermissionsCache:http___www.google.com')
+  key = permissionCache.makeKey('http://www.google.com');
+  expect(key).toBe('RolesPermissionsCache:http___www.google.com');
 });
 
 it('too old should return true', async () => {
