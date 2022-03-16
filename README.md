@@ -18,7 +18,7 @@ Set a cache, get a cache, define the cache object shape.
     - [Connect first somewhere in your app](#connect-first-somewhere-in-your-app)
     - [Set a model up `PermissionsCache.ts`](#set-a-model-up-permissionscachets)
     - [Use it:](#use-it)
-- [cacheMaxAgeMs options](#cachemaxagems-options)
+- [cacheMaxAgeMs and cachePopulatorMsGraceTime options](#cachemaxagems-and-cachepopulatormsgracetime-options)
 - [Developers](#developers)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
