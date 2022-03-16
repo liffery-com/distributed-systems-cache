@@ -128,18 +128,27 @@ PermissionsCache.get('admin')
 PermissionsCache.set('admin': { permissions: ['write', 'read'] })
 ```
 
-## cacheMaxAgeMs options
-The cacheMaxAgeMs option defaults to 1 day.
+## cacheMaxAgeMs and cachePopulatorMsGraceTime options
+Both the cacheMaxAgeMs and cachePopulatorMsGraceTime have default values that can be overriden by injecting a number replacement or a string to be coverted to a millisecond timestamp with https://www.npmjs.com/package/ms.
 
-You can change this by passing in your own millisecond time stamp.
+(ms timestamps can be a pain to type out over and over hence https://www.npmjs.com/package/ms)
 
-MS timestamps can be a pain to calculate, you can also pass a string which will be calculated via https://www.npmjs.com/package/ms
-
-eg:
+eg with strings:
 ```typescript
 export default new DistributedSystemsCache<MsRolesPermissionsRole>({
   cacheKeyPrefix: 'MyCache:',
-  cacheMaxAgeMs: '5 days',
+  cacheMaxAgeMs: '5 days', // translates to 1000 * 60 * 60 * 24 * 5
+  cachePopulatorMsGraceTime: '2m', // translates to 1000 * 60 * 2
+  cachePopulator: () => {  /* some populator */ },
+});
+```
+
+eg with numbers:
+```typescript
+export default new DistributedSystemsCache<MsRolesPermissionsRole>({
+  cacheKeyPrefix: 'MyCache:',
+  cacheMaxAgeMs: 1000 * 60 * 60, // 1 hour
+  cachePopulatorMsGraceTime: 1000 * 60, // 1 min
   cachePopulator: () => {  /* some populator */ },
 });
 ```

@@ -9,7 +9,7 @@ export interface IDistributedSystemsCache {
   cacheKeyReplaceWith?: string,
   cacheMaxAgeMs?: number | string,
   cachePopulator?: (identifier?: string) => Promise<void>,
-  cachePopulatorMsGraceTime?: number,
+  cachePopulatorMsGraceTime?: number | string,
   cachePopulatorMaxTries?: number,
   cacheSetFilter?: (input: any) => any
 }
@@ -84,15 +84,15 @@ export class DistributedSystemsCache<T> {
     this.cacheKeyPrefix = input.cacheKeyPrefix;
     this.cacheKeyReplaceRegex = input.cacheKeyReplaceRegex || this.cacheKeyReplaceRegex;
     this.cacheKeyReplaceWith = input.cacheKeyReplaceWith || this.cacheKeyReplaceWith;
-    this.calculateCacheMaxAge(input.cacheMaxAgeMs);
+    this.cacheMaxAgeMs = this.inputToMs(this.cacheMaxAgeMs, input.cacheMaxAgeMs);
+    this.cachePopulatorMsGraceTime = this.inputToMs(this.cachePopulatorMsGraceTime, input.cachePopulatorMsGraceTime);
     this.cachePopulator = input.cachePopulator || this.cachePopulator;
-    this.cachePopulatorMsGraceTime = input.cachePopulatorMsGraceTime || this.cachePopulatorMsGraceTime;
     this.cachePopulatorMaxTries = input.cachePopulatorMaxTries || this.cachePopulatorMaxTries;
     this.cacheSetFilter = input.cacheSetFilter || this.cacheSetFilter;
     this.verboseLog = input.verboseLog || false;
   }
 
-  calculateCacheMaxAge (input?: number | string): number {
+  inputToMs (defaultVal: number, input?: number | string): number {
     switch (typeof input) {
       case 'string':
         const calculated = ms(input);
@@ -103,7 +103,7 @@ export class DistributedSystemsCache<T> {
       case 'number':
         return input;
       default:
-        return this.cacheMaxAgeMs;
+        return defaultVal;
     }
   }
 

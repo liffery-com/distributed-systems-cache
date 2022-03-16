@@ -21,22 +21,44 @@ beforeAll(async () => {
   await client().flushdb();
 });
 
+const defaultMsTime = 24 * 60 * 60 * 1000;
+
 it('calculateCacheMaxAge should return the default', () => {
-  expect(permissionCache.calculateCacheMaxAge()).toBe(24 * 60 * 60 * 1000);
+
+  expect(permissionCache.inputToMs(defaultMsTime)).toBe(defaultMsTime);
 });
 it('calculateCacheMaxAge should return the given number', () => {
-  expect(permissionCache.calculateCacheMaxAge(1000)).toBe(1000);
+  expect(permissionCache.inputToMs(defaultMsTime, 1000)).toBe(1000);
 });
 it('calculateCacheMaxAge should return the number from string', () => {
-  expect(permissionCache.calculateCacheMaxAge('1d')).toBe(86400000);
+  expect(permissionCache.inputToMs(defaultMsTime, '1d')).toBe(86400000);
 });
 it('calculateCacheMaxAge should throw an error when the input string is wrong', (done) => {
   try {
-    permissionCache.calculateCacheMaxAge('not a valid string');
+    permissionCache.inputToMs(defaultMsTime, 'not a valid string');
     done('Should have thrown an error with the input of \'not a valid string\'');
   } catch (e) {
     done();
   }
+});
+
+it('should initialise and have the correct settings', async () => {
+  const settings = {
+    verboseLog: true,
+    cacheDefaultValue: 'bob',
+    cacheMaxAgeMs: '1d',
+    cachePopulatorMsGraceTime: '2m',
+    cacheKeyPrefix: 'RolesPermissionsCache:',
+    cachePopulator: async () => {
+      cachePopulatorCalled = true;
+    }
+  };
+  const anotherCache = new DistributedSystemsCache<MsRolesPermissionsRole>(settings);
+  expect(anotherCache.verboseLog).toBe(settings.verboseLog);
+  expect(anotherCache.cacheDefaultValue).toBe(settings.cacheDefaultValue);
+  expect(anotherCache.cacheMaxAgeMs).toBe(1000 * 60 * 60 * 24);
+  expect(anotherCache.cachePopulatorMsGraceTime).toBe(1000 * 60 * 2);
+  expect(anotherCache.cacheKeyPrefix).toBe(settings.cacheKeyPrefix);
 });
 
 it('should calculate the correct key', async () => {
