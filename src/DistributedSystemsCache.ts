@@ -9,6 +9,7 @@ export interface IDistributedSystemsCache {
   cacheKeyReplaceWith?: string,
   cacheMaxAgeMs?: number | string,
   cachePopulator?: (identifier?: string) => Promise<void>,
+  cachePopulatorDelete?: boolean,
   cachePopulatorMsGraceTime?: number | string,
   cachePopulatorMaxTries?: number,
   cacheSetFilter?: (input: any) => any
@@ -53,11 +54,18 @@ export class DistributedSystemsCache<T> {
 
   /**
    * A function injected on setup that will be called to populate
-   * a cache value should one not be found.
+   * a cache value should one not be found. cachePopulatorDelete
+   * will bypass this callback
    */
   cachePopulator: (identifier?: string) => Promise<void> = async () => {
     // placeholder function
   };
+
+  /**
+   * When true, the cache will not automatically be repopulated.
+   * Instead, when the cache expires it is simply deleted.
+   */
+  cachePopulatorDelete = false;
 
   /**
    * The defualt number of tries before the getCache will call the cachePopulate
@@ -87,6 +95,7 @@ export class DistributedSystemsCache<T> {
     this.cacheMaxAgeMs = this.inputToMs(this.cacheMaxAgeMs, input.cacheMaxAgeMs);
     this.cachePopulatorMsGraceTime = this.inputToMs(this.cachePopulatorMsGraceTime, input.cachePopulatorMsGraceTime);
     this.cachePopulator = input.cachePopulator || this.cachePopulator;
+    this.cachePopulatorDelete = input.cachePopulatorDelete || false;
     this.cachePopulatorMaxTries = input.cachePopulatorMaxTries || this.cachePopulatorMaxTries;
     this.cacheSetFilter = input.cacheSetFilter || this.cacheSetFilter;
     this.verboseLog = input.verboseLog || false;
@@ -125,6 +134,9 @@ export class DistributedSystemsCache<T> {
     if (this.cacheTooOld(json.updatedAt, this.cacheMaxAgeMs)) {
       this.logger('getCache age check too old', { updatedAt: json.updatedAt });
       await this.clearCacheRecord(cacheKey);
+      if (!this.cachePopulatorDelete) {
+        return;
+      }
       await this.cachePopulator(cacheKey);
     }
   }
@@ -174,7 +186,7 @@ export class DistributedSystemsCache<T> {
     const json: T & { updatedAt: number } = await client().getJson(this.makeKey(cacheKey));
     if (!json) {
       this.logger('getCache null', { cacheKey, fetchAttempt });
-      if (this.cachePopulatorMaxTries <= fetchAttempt) {
+      if (this.cachePopulatorMaxTries <= fetchAttempt || this.cachePopulatorDelete) {
         if (this.cacheDefaultValue) {
           return this.cacheDefaultValue;
         } else {

@@ -36,6 +36,9 @@ You must initialise before calling another of the other methods, here are all th
 
 Here is an example: [Connect first somewhere in your app](#connect-first-somewhere-in-your-app)
 
+###### Options
+For all options available and descriptions please see `src/DistributedSystemsCache.ts` 
+
 
 #### Method: setCache
 Set a cache value, pass in a key and an object. The key will be automatically prefixed with the `cacheKeyPrefix`.
