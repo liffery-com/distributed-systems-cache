@@ -9,6 +9,7 @@ Set a cache, get a cache, define the cache object shape.
 - [Overview](#overview)
 - [API](#api)
     - [construct](#construct)
+        - [Options](#options)
     - [Method: setCache](#method-setcache)
     - [Method: getCache](#method-getcache)
     - [Method: getAll](#method-getall)
