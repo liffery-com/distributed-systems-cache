@@ -180,7 +180,7 @@ export class DistributedSystemsCache<T> {
    * @param cacheKey
    * @param fetchAttempt
    */
-  async getCache (cacheKey: string, fetchAttempt = 0): Promise<T> {
+  async getCache (cacheKey: string, fetchAttempt = 0): Promise<T | undefined> {
     this.logger('getCache called', { cacheKey });
 
     const json: T & { updatedAt: number } = await client().getJson(this.makeKey(cacheKey));
@@ -190,8 +190,12 @@ export class DistributedSystemsCache<T> {
         if (this.cacheDefaultValue) {
           return this.cacheDefaultValue;
         } else {
-          console.log('rejecting: ' + this.cacheKeyPrefix + cacheKey);
-          throw new Error('No cache object found, cache not generated within the cachePopulatorMsGraceTime of ' + this.cachePopulatorMsGraceTime);
+          if (this.cachePopulatorDelete) {
+            return undefined;
+          } else {
+            console.log('rejecting: ' + this.cacheKeyPrefix + cacheKey);
+            throw new Error('No cache object found, cache not generated within the cachePopulatorMsGraceTime of ' + this.cachePopulatorMsGraceTime);
+          }
         }
       }
       ++fetchAttempt;

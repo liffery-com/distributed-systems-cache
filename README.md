@@ -101,15 +101,19 @@ export default new DistributedSystemsCache<MsRolesPermissionsRole>({
   cacheKeyPrefix: 'RolesPermissionsCache:',
   cacheKeyReplaceRegex: new Regex(/:/gm), // replace the default to only replace :
   cacheKeyReplaceWith: '-', // replace the default _ with -
-  cachePopulator: () => {
+  cachePopulator: (packageJsonName: string) => {
+    // This function will be called when the cache is either not found or too old
+    // This function should do something that will create a new cache object based 
+    // on the cache key requests
     RabbitMQService.msRolesPermissionsRolesRequest({
-      fromService: packageJson.name
+      fromService: packageJsonName
     });
   },
+  cachePopulatorDelete: false, // When this is true, the cache populator will not be called and a cache miss will return undefined. You should refill this cache on your own
   cacheMaxAgeMs: 1000 * 60 * 60 * 24 * 7, // 1 week life
   cachePopulatorMsGraceTime: 200,
   cachePopulatorMaxTries: 3,
-  // Ensuring that we only persist what we need
+  // Ensuring that we only persist what we need from the provided cache set data
   cacheSetFilter: (input: any): MsRolesPermissionsRole => {
     return input.map((input: any) => {
       return {
@@ -126,11 +130,24 @@ export default new DistributedSystemsCache<MsRolesPermissionsRole>({
 import PermissionsCache form '@/PermissionsCache'
 
 // get the permissions for the role admin
-PermissionsCache.get('admin')
+await PermissionsCache.get('admin')
 
 // or set the permissions for the role admin
-PermissionsCache.set('admin': { permissions: ['write', 'read'] })
+await PermissionsCache.set('admin': { permissions: ['write', 'read'] })
 ```
+
+If you set the cachePopulatorDelete to true you will have check the cache exists
+```
+import PermissionsCache form '@/PermissionsCache'
+
+// get the permissions for the role admin
+const cache = await PermissionsCache.get('admin')
+
+if(!cache){
+  // do something
+} 
+```
+
 
 ## cacheMaxAgeMs and cachePopulatorMsGraceTime options
 Both the cacheMaxAgeMs and cachePopulatorMsGraceTime have default values that can be overriden by injecting a number replacement or a string to be coverted to a millisecond timestamp with https://www.npmjs.com/package/ms.
