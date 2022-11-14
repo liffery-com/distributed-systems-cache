@@ -100,25 +100,25 @@ it('should add another cache value, and fetch back both ok', async () => {
   expect(cache2.permissions.length).toBe(1);
 });
 
-it('should throw an error when a cache is not found, should also call the populate function', async (done) => {
-  try {
-    await permissionCache.getCache('dummy3');
-    done('Should have thrown an error as the cache does not exist and the call to populate does nothing!');
-  } catch (e) {
-    expect(cachePopulatorCalled).toBe(true);
-    done();
-  }
+it('should throw an error when a cache is not found, should also call the populate function', (done) => {
+  permissionCache.getCache('dummy3')
+    .then(() => {
+      done('Should have thrown an error as the cache does not exist and the call to populate does nothing!');
+    })
+    .catch(() => {
+      expect(cachePopulatorCalled).toBe(true);
+      done();
+    });
 });
 
-it('should est and delete a cache', async (done) => {
+it('should est and delete a cache', async () => {
   await permissionCache.setCache('dummydel', { permissions: ['abc'] });
   await permissionCache.getCache('dummydel'); // would throw an error if not found
   await permissionCache.clearCacheRecord('dummydel');
   try {
     await permissionCache.getCache('dummydel');
-    done('Should have thrown an error as the cache does not exist and the call to populate does nothing!');
   } catch (e) {
-    done();
+    expect(e).toBeTruthy();
   }
 });
 

@@ -2,86 +2,80 @@ import client from 'async-redis-shared';
 import ms from 'ms';
 
 export interface IDistributedSystemsCache {
-  verboseLog?: boolean,
-  cacheDefaultValue?: any,
-  cacheKeyPrefix: string,
-  cacheKeyReplaceRegex?: RegExp,
-  cacheKeyReplaceWith?: string,
-  cacheMaxAgeMs?: number | string,
-  cachePopulator?: (identifier?: string) => Promise<void>,
-  cachePopulatorDelete?: boolean,
-  cachePopulatorMsGraceTime?: number | string,
-  cachePopulatorMaxTries?: number,
-  cacheSetFilter?: (input: any) => any
-}
-
-export class DistributedSystemsCache<T> {
   /**
    * Log or not
    */
-  verboseLog = false;
-
+  verboseLog?: boolean,
   /**
    * The default cache value, if passed in.
    * If the cache-populator fails, then the default value will be returned
    * should the value be passed on setup, else an error is thrown
    */
-  cacheDefaultValue?: T;
-
+  cacheDefaultValue?: any,
   /**
    * The prefix for this set of cache keys.
    * Required when using 1 redis index for multiple cache record types
    */
-  cacheKeyPrefix: string;
-
+  cacheKeyPrefix: string,
   /**
    * A RegExp object that will be used to alter the cache keys.
    * The default replaces all @ and / characters
    */
-  cacheKeyReplaceRegex = new RegExp(/\/|@|:/gm);
-
+  cacheKeyReplaceRegex?: RegExp,
   /**
-   * Each of the reaplce values will be replace with this string
+   * Each of the replace values will be replaced with this string
    */
-  cacheKeyReplaceWith = '_';
-
+  cacheKeyReplaceWith?: string,
   /**
    * The max age 1 cache record is premitted to live for. Once
    * older than this value, the cachePopulator will be called.
+   *
+   * The max age of the cache in milliseconds or a string convertable by the
+   * https://www.npmjs.com/package/ms library, eg "14 days"
+   *
    * Set to -1 for no limit
    */
-  cacheMaxAgeMs: number = 24 * 60 * 60 * 1000; // default is 1 day
-
+  cacheMaxAgeMs?: number | string,
   /**
    * A function injected on setup that will be called to populate
    * a cache value should one not be found. cachePopulatorDelete
    * will bypass this callback
    */
-  cachePopulator: (identifier?: string) => Promise<void> = async () => {
-    // placeholder function
-  };
-
+  cachePopulator?: (identifier?: string) => Promise<void>,
   /**
    * When true, the cache will not automatically be repopulated.
    * Instead, when the cache expires it is simply deleted.
    */
-  cachePopulatorDelete = false;
-
-  /**
-   * The defualt number of tries before the getCache will call the cachePopulate
-   * before throwing an error
-   */
-  cachePopulatorMaxTries = 3;
-
+  cachePopulatorDelete?: boolean,
   /**
    * The amount of time the recursive function will wait before checking
    * the if th cache is ready again
    */
-  cachePopulatorMsGraceTime = 150;
-
+  cachePopulatorMsGraceTime?: number | string,
+  /**
+   * The default number of tries before the getCache will call the cachePopulate
+   * before throwing an error
+   */
+  cachePopulatorMaxTries?: number,
   /**
    * When present the input will be run through this injectable function
    */
+  cacheSetFilter?: (input: any) => any
+}
+
+export class DistributedSystemsCache<T> {
+  verboseLog = false;
+  cacheDefaultValue?: T;
+  cacheKeyPrefix: string;
+  cacheKeyReplaceRegex = new RegExp(/\/|@|:/gm);
+  cacheKeyReplaceWith = '_';
+  cacheMaxAgeMs: number = 24 * 60 * 60 * 1000; // default is 1 day
+  cachePopulator: (identifier?: string) => Promise<void> = async () => {
+    // placeholder function
+  };
+  cachePopulatorDelete = false;
+  cachePopulatorMaxTries = 3;
+  cachePopulatorMsGraceTime = 150;
   cacheSetFilter?: (input: T) => T;
 
   constructor (input: IDistributedSystemsCache) {
