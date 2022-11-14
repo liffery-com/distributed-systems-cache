@@ -3,6 +3,7 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [Changelog](#changelog)
+  - [1.14.0](#1140)
   - [1.12.0](#1120)
   - [1.8.0](#180)
   - [1.7.0](#170)
