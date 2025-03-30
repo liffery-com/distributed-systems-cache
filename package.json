@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0-rc.0",
+  "version": "2.0.0",
   "name": "distributed-systems-cache",
   "description": "distributed-systems-cache",
   "main": "./build/index.js",
@@ -22,7 +22,7 @@
     "url": "https://github.com/johndcarmichael/distributed-systems-cache.git"
   },
   "dependencies": {
-    "redis-singleton": "^0.1.0",
+    "redis-singleton": "^1.0.0",
     "ms": "^2.1.3"
   },
   "devDependencies": {

@@ -23,7 +23,8 @@ All notable changes to this project will be documented in this file. Dates are d
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 #### 2.0.0
-- Moved to [`redis-singleton`](https://www.npmjs.com/package/redis-singleton)
+- Moved to [`redis-singleton`](https://www.npmjs.com/package/redis-singleton) which uses the latest npm redis client
+- Test updated to reflect the small changes seen in the latest redis client
 
 #### [1.14.0](https://github.com/johndcarmichael/distributed-systems-cache/compare/1.12.0...1.14.0)
 - Docs and dependency updates
