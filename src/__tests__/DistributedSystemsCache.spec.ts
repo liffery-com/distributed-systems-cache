@@ -1,5 +1,4 @@
-import { client, DistributedSystemsCache } from '@/index';
-import connect from 'async-redis-shared/connect';
+import { getClient, connect, DistributedSystemsCache } from '../index';
 
 export interface MsRolesPermissionsRole {
   permissions: string[];
@@ -16,9 +15,9 @@ const permissionCache = new DistributedSystemsCache<MsRolesPermissionsRole>({
 
 beforeAll(async () => {
   await connect({
-    db: 0
+    database: 0
   });
-  await client().flushdb();
+  await getClient().flushDb()
 });
 
 const defaultMsTime = 24 * 60 * 60 * 1000;
@@ -89,15 +88,15 @@ it('too old should return false', async () => {
 it('should add a cache value, and fetch back ok', async () => {
   await permissionCache.setCache('dummy1', { permissions: ['abc', 'def'] });
   const cache = await permissionCache.getCache('dummy1');
-  expect(cache.permissions.length).toBe(2);
+  expect(cache?.permissions.length).toBe(2);
 });
 
 it('should add another cache value, and fetch back both ok', async () => {
   await permissionCache.setCache('dummy2', { permissions: ['abc'] });
   const cache1 = await permissionCache.getCache('dummy1');
-  expect(cache1.permissions.length).toBe(2);
+  expect(cache1?.permissions.length).toBe(2);
   const cache2 = await permissionCache.getCache('dummy2');
-  expect(cache2.permissions.length).toBe(1);
+  expect(cache2?.permissions.length).toBe(1);
 });
 
 it('should throw an error when a cache is not found, should also call the populate function', (done) => {

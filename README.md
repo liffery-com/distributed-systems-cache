@@ -1,183 +1,239 @@
-# distributed-systems-cache
+# Distributed Systems Cache
 
-Set a cache, get a cache, define the cache object shape.
+A robust caching layer built on top of Redis, designed for distributed systems. It handles cache expiration, automatic population (or deletion), key sanitization, and provides a simple interface for managing cache entries using the `redis-singleton` package for a shared Redis client connection.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Overview](#overview)
-- [API](#api)
-    - [construct](#construct)
-        - [Options](#options)
-    - [Method: setCache](#method-setcache)
-    - [Method: getCache](#method-getcache)
-    - [Method: getAll](#method-getall)
-    - [Method: clearCacheRecord](#method-clearcacherecord)
-    - [Method: clearAllCacheRecords](#method-clearallcacherecords)
-- [Example](#example)
-    - [Connect first somewhere in your app](#connect-first-somewhere-in-your-app)
-    - [Set a model up `PermissionsCache.ts`](#set-a-model-up-permissionscachets)
-    - [Use it:](#use-it)
-- [cacheMaxAgeMs and cachePopulatorMsGraceTime options](#cachemaxagems-and-cachepopulatormsgracetime-options)
-- [Developers](#developers)
+- [Features](#features)
+- [Installation](#installation)
+- [Prerequisites](#prerequisites)
+- [Core Concepts](#core-concepts)
+- [Usage](#usage)
+  - [1. Initialize Redis Connection](#1-initialize-redis-connection)
+  - [2. Create a Cache Instance](#2-create-a-cache-instance)
+  - [3. Get Data from Cache](#3-get-data-from-cache)
+  - [4. Manually Set Data](#4-manually-set-data)
+  - [5. Clear Cache Entries](#5-clear-cache-entries)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Overview
-- All content is expected to be a js object so everything is stringified on input and parsed on output.
-- All keys run through a regex check, ie the bit after the cache key prefix. This regex has a default but can be injected on setup.
-- All objects can be passed through a function to filter the persisted content, this must be injected on setup, else nothing is filtered.
-- All keys not found will be requested via the injected call to populate on setup, this can be anything from a RMQ call or REST or some arbitrary DB aggregation.
-- !Important: the call to populate function should call the setCache on its own, or trigger your application to do so, the response from the call to populate is expected to be void.
+## Features
 
-## API
-#### construct
-You must initialise before calling another of the other methods, here are all the options from the source code:  src/DistributedSystemsCache.ts
+*   **Redis-backed:** Leverages Redis for fast, shared cache storage.
+*   **Automatic Cache Population:** Define a function (`cachePopulator`) to automatically fetch and store data when a cache miss occurs or data expires.
+*   **Configurable Expiration:** Set maximum age for cache entries using milliseconds or human-readable strings (e.g., `"1 day"`, `"2h"` via the `ms` library).
+*   **Optional Deletion on Expiry:** Choose to simply delete expired cache entries instead of repopulating them (`cachePopulatorDelete`).
+*   **Grace Period & Retries:** Handles concurrent requests for expired/missing keys gracefully using a short wait time and retry mechanism before potentially failing.
+*   **Key Prefixing:** Safely use a single Redis instance for multiple cache types by providing a unique `cacheKeyPrefix`.
+*   **Key Sanitization:** Automatically replaces potentially problematic characters in cache keys (configurable).
+*   **Data Filtering:** Optionally apply a filter function (`cacheSetFilter`) to data before it's stored in the cache.
+*   **Default Value Fallback:** Provide a default value to return if the cache is empty and population fails.
+*   **Verbose Logging:** Optional detailed logging for debugging.
+*   **TypeScript Support:** Written in TypeScript with exported types.
 
-Here is an example: [Connect first somewhere in your app](#connect-first-somewhere-in-your-app)
+## Installation
 
-###### Options
-For all options available and descriptions please see `src/DistributedSystemsCache.ts` 
+You need to install this package along with its peer dependency `redis`.
 
-
-#### Method: setCache
-Set a cache value, pass in a key and an object. The key will be automatically prefixed with the `cacheKeyPrefix`.
-The setCache will also add an updatedAt field to the object you provide, this will be used to determine the age of the cache on extraction.
-```
-async setCache (cacheKey: string, cacheObject: T): Promise<void>
+```bash
+npm install redis
 ```
 
-#### Method: getCache
-Gets a cache by key (excluding the prefix, this is prepended automatically).
-If the cache key is not found, the `cachePopulator` callback is called. After the grace time, it will try and fetch the cache again...
-It will repeat this up until a cache hit is found, or the qty of tries is equal to the cachePopulatorMaxTries.
-Each cache hit is returned and validated/ refreshed.
-```
-async getCache (cacheKey: string): Promise<T>
-```
-NB: the `private validateAgeAndFetch` method is called, but the `getCache` doesn't `await` the response. Instead, the callee will only catch and error console a rejected promise at this point.
+## Prerequisites
+- A running Redis server accessible by your application. 
+- You need to manage the Redis connection using redis-singleton. Ensure you connect before using the cache and disconnect when your application shuts down.
 
-#### Method: getAll
-Does what you would imagine, grabs all the cache values for a given key.
+## Core Concepts
+- Cache Key: A unique identifier for a piece of data within the cache. The final key stored in Redis will be cacheKeyPrefix + sanitized identifier.
+- Expiration (cacheMaxAgeMs): How long a cache entry is considered valid. After this duration, getCache will treat it as stale. 
+- Population (cachePopulator): An async function you provide. It's called by getCache when data is missing or stale (unless cachePopulatorDelete is true). Its responsibility is to fetch the fresh data and store it using setCache. 
+- Grace Time & Retries: When multiple processes/requests call getCache for a missing/stale key simultaneously, only the first one (or subsequent ones after failures) might trigger the cachePopulator. Others will pause briefly (cachePopulatorMsGraceTime) and retry (cachePopulatorMaxTries) fetching the key, expecting the populator to have finished.
 
-#### Method: clearCacheRecord
-Does what you would imagine, for a given cache key, it removes it (as usual, the prefix is added internally):
+## Usage
+### 1. Initialize Redis Connection
+Use `redis-singleton` to establish the connection. This should happen before you interact with the DistributedSystemsCache.
+
 ```typescript
-await distributedSystemsCache.clearCacheRecord('admin')
-```
+import { connect, disconnect } from 'redis-singleton';
 
-#### Method: clearAllCacheRecords
-Does what you would imagine, clears all records for instantiated prefix:
-```typescript
-await distributedSystemsCache.clearAllCacheRecords()
-```
+async function initializeApp() {
+  try {
+    // Replace with your Redis connection options
+    await connect({
+      url: 'redis://localhost:6379'
+      // Or use host, port, password, etc.
+    });
+    console.log('Redis connected successfully.');
 
-## Example
+    // ... Initialize and use your DistributedSystemsCache instances here ...
 
-Currently this requires the use of async-redis-shared.
-
-#### Connect first somewhere in your app
-```typescript
-import { connect } from 'distributed-systems-cache';
-
-// from https://www.npmjs.com/package/async-redis-shared
-await connect({
-    db: 6,
-});
-```
-
-#### Set a model up `PermissionsCache.ts`
-```typescript
-import { DistributedSystemsCache } from 'distributed-systems-cache'
-
-// the cache definition
-export interface MsRolesPermissionsRole {
-  permissions: string[];
+  } catch (error) {
+    console.error('Failed to connect to Redis:', error);
+    process.exit(1);
+  }
 }
 
-// instantiate, declaring the cachePopulator and cacheKeyPrefix
-export default new DistributedSystemsCache<MsRolesPermissionsRole>({
-  cacheKeyPrefix: 'RolesPermissionsCache:',
-  cacheKeyReplaceRegex: new Regex(/:/gm), // replace the default to only replace :
-  cacheKeyReplaceWith: '-', // replace the default _ with -
-  cachePopulator: (packageJsonName: string) => {
-    // This function will be called when the cache is either not found or too old
-    // This function should do something that will create a new cache object based 
-    // on the cache key requests
-    RabbitMQService.msRolesPermissionsRolesRequest({
-      fromService: packageJsonName
-    });
+async function shutdownApp() {
+  // ... clean up other resources ...
+  await disconnect();
+  console.log('Redis disconnected.');
+}
+
+// Call initializeApp on startup and shutdownApp on exit
+initializeApp();
+
+// Graceful shutdown handling
+process.on('SIGINT', shutdownApp);
+process.on('SIGTERM', shutdownApp);
+```
+
+### 2. Create a Cache Instance
+Import `DistributedSystemsCache` and instantiate it with your desired configuration.
+
+```typescript
+import { DistributedSystemsCache } from 'distributed-systems-cache';
+
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  lastLogin: Date;
+}
+
+// Example: User Profile Cache
+const userProfileCache = new DistributedSystemsCache<UserProfile>({
+  cacheKeyPrefix: 'userprofile:', // REQUIRED: Unique prefix for this cache type
+  cacheMaxAgeMs: '1h', // Cache entries expire after 1 hour
+  verboseLog: process.env.NODE_ENV !== 'production', // Log more in development
+
+  // Define how to fetch and cache data when it's missing or stale
+  cachePopulator: async (userId?: string) => {
+    if (!userId) {
+      console.error('User profile cachePopulator called without a userId!');
+      return; // Or throw an error
+    }
+    console.log(`Populating cache for user: ${userId}`);
+    try {
+      // Simulate fetching data from a database or API
+      const userProfileData: UserProfile = await fetchUserProfileFromSource(userId);
+
+      // Use the instance's setCache method to store the fetched data
+      // The `updatedAt` timestamp is added automatically by setCache
+      await userProfileCache.setCache(userId, userProfileData);
+
+      console.log(`Successfully populated cache for user: ${userId}`);
+    } catch (error) {
+      console.error(`Failed to populate cache for user ${userId}:`, error);
+      // Optional: Implement retry logic or error handling specific to data fetching
+      // Note: getCache has its own retry mechanism for *checking* the cache,
+      // but this populator handles fetching the *source* data.
+    }
   },
-  cachePopulatorDelete: false, // When this is true, the cache populator will not be called and a cache miss will return undefined. You should refill this cache on your own
-  cacheMaxAgeMs: 1000 * 60 * 60 * 24 * 7, // 1 week life
-  cachePopulatorMsGraceTime: 200,
-  cachePopulatorMaxTries: 3,
-  // Ensuring that we only persist what we need from the provided cache set data
-  cacheSetFilter: (input: any): MsRolesPermissionsRole => {
-    return input.map((input: any) => {
-      return {
-        permissions: input.permissions,
-      };
-    });
+
+  // Optional: Provide a default value if cache population fails after retries
+  // cacheDefaultValue: { id: 0, name: 'Guest', email: '', lastLogin: new Date(0) },
+
+  // Optional: If true, expired items are just deleted, not repopulated automatically by getCache
+  // cachePopulatorDelete: false,
+
+  // Optional: Customize retry behavior
+  // cachePopulatorMsGraceTime: 150, // Default: 150ms wait between checks
+  // cachePopulatorMaxTries: 3,      // Default: 3 attempts to get populated data
+});
+
+// Dummy function for the example
+async function fetchUserProfileFromSource(userId: string): Promise<UserProfile> {
+  console.log(`--> Simulating DB call for user ${userId}`);
+  await new Promise(resolve => setTimeout(resolve, 50)); // Simulate network latency
+  if (userId === 'user_not_found') {
+      throw new Error('User not found in source');
   }
-});
+  return {
+    id: parseInt(userId.split('_')[1], 10),
+    name: `User ${userId}`,
+    email: `${userId}@example.com`,
+    lastLogin: new Date(),
+  };
+}
 ```
 
-#### Use it:
+### 3. Get Data from Cache
+Use the `getCache` method. It handles checking expiry, triggering the populator, and retries automatically.
 
-```
-import PermissionsCache form '@/PermissionsCache'
-
-// get the permissions for the role admin
-await PermissionsCache.get('admin')
-
-// or set the permissions for the role admin
-await PermissionsCache.set('admin': { permissions: ['write', 'read'] })
-```
-
-If you set the cachePopulatorDelete to true you will have check the cache exists
-```
-import PermissionsCache form '@/PermissionsCache'
-
-// get the permissions for the role admin
-const cache = await PermissionsCache.get('admin')
-
-if(!cache){
-  // do something
-} 
-```
-
-
-## cacheMaxAgeMs and cachePopulatorMsGraceTime options
-Both the cacheMaxAgeMs and cachePopulatorMsGraceTime have default values that can be overriden by injecting a number replacement or a string to be coverted to a millisecond timestamp with https://www.npmjs.com/package/ms.
-
-(ms timestamps can be a pain to type out over and over hence https://www.npmjs.com/package/ms)
-
-eg with strings:
 ```typescript
-export default new DistributedSystemsCache<MsRolesPermissionsRole>({
-  cacheKeyPrefix: 'MyCache:',
-  cacheMaxAgeMs: '5 days', // translates to 1000 * 60 * 60 * 24 * 5
-  cachePopulatorMsGraceTime: '2m', // translates to 1000 * 60 * 2
-  cachePopulator: () => {  /* some populator */ },
-});
+async function getUserProfile(userId: string): Promise<UserProfile | undefined> {
+  try {
+    const profile = await userProfileCache.getCache(userId);
+
+    if (profile) {
+      console.log(`Cache hit for ${userId}:`, profile);
+      // The profile object returned will NOT contain the internal `updatedAt` field.
+    } else {
+      // This might happen if:
+      // 1. cachePopulatorDelete = true and the item expired/was never set.
+      // 2. cachePopulator failed repeatedly and no cacheDefaultValue was set.
+      console.log(`Cache miss and population failed (or delete=true) for ${userId}.`);
+    }
+    return profile;
+
+  } catch (error) {
+    // This error is thrown if the cache is empty, populator doesn't succeed
+    // within the grace time/retries, AND no cacheDefaultValue is provided.
+    console.error(`Critical error getting profile for ${userId}:`, error);
+    // Handle the failure appropriately (e.g., return default, show error page)
+    return undefined; // Or re-throw
+  }
+}
+
+// Example usage:
+(async () => {
+    await initializeApp(); // Make sure Redis is connected
+
+    const userId1 = 'user_123';
+    const userId2 = 'user_456';
+
+    console.log(`\n--- Getting profile for ${userId1} (first time) ---`);
+    await getUserProfile(userId1); // Cache miss, triggers populator
+
+    console.log(`\n--- Getting profile for ${userId1} (second time) ---`);
+    await getUserProfile(userId1); // Cache hit
+
+    console.log(`\n--- Getting profile for ${userId2} (first time) ---`);
+    await getUserProfile(userId2); // Cache miss, triggers populator
+
+    // Simulate cache expiration (if maxAge was short enough) or manual clearing
+    // await userProfileCache.clearCacheRecord(userId1);
+    // console.log(`\n--- Getting profile for ${userId1} (after clearing) ---`);
+    // await getUserProfile(userId1); // Cache miss, triggers populator again
+
+    await shutdownApp();
+})();
 ```
 
-eg with numbers:
+### 4. Manually Set Data
+You can bypass the `cachePopulator` and set data directly using `setCache`. Generally you may want to do this when you know the cache should be set, for instance when a new user is created in another service/system.
+
 ```typescript
-export default new DistributedSystemsCache<MsRolesPermissionsRole>({
-  cacheKeyPrefix: 'MyCache:',
-  cacheMaxAgeMs: 1000 * 60 * 60, // 1 hour
-  cachePopulatorMsGraceTime: 1000 * 60, // 1 min
-  cachePopulator: () => {  /* some populator */ },
-});
+async function updateUserProfile(userId: string, newData: Partial<UserProfile>) {
+    const currentProfile = await userProfileCache.getCache(userId); // Get current data (optional)
+    const updatedProfile = { ...currentProfile, ...newData, id: currentProfile?.id || 0 }; // Merge
+
+    // Assume updatedProfile is now a complete UserProfile object
+    await userProfileCache.setCache(userId, updatedProfile as UserProfile);
+    console.log(`Manually updated cache for user ${userId}`);
+}
 ```
 
-## Developers
+### 5. Clear Cache Entries
+```typescript
+// Clear a specific user's profile
+await userProfileCache.clearCacheRecord('user_123');
 
-Start at the unit tests:  `src/__tests__/DistributedSystemsCache.spec.ts`
+// Clear ALL entries managed by this userProfileCache instance (use with caution!)
+// await userProfileCache.clearAllCacheRecords();
+```
 
-Additionally, to run the tests you need redis running on local host for now. 
 
-But you cannot publish unless the tests pass.. :)
+

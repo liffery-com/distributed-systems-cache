@@ -1,26 +1,29 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. Dates are displayed in UTC.
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [Changelog](#changelog)
-  - [1.14.0](#1140)
-  - [1.12.0](#1120)
-  - [1.8.0](#180)
-  - [1.7.0](#170)
-  - [1.6.0](#160)
-  - [1.5.0](#150)
-  - [1.4.0](#140)
-  - [1.3.0](#130)
-  - [1.2.0](#120)
-  - [1.1.1](#111)
-  - [1.1.0](#110)
-  - [1.0.0](#100)
+- [2.0.0](#200)
+- [1.14.0](#1140)
+- [1.12.0](#1120)
+- [1.8.0](#180)
+- [1.7.0](#170)
+- [1.6.0](#160)
+- [1.5.0](#150)
+- [1.4.0](#140)
+- [1.3.0](#130)
+- [1.2.0](#120)
+- [1.1.1](#111)
+- [1.1.0](#110)
+- [1.0.0](#100)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-### Changelog
-
-All notable changes to this project will be documented in this file. Dates are displayed in UTC.
+#### 2.0.0
+- Moved to [`redis-singleton`](https://www.npmjs.com/package/redis-singleton)
 
 #### [1.14.0](https://github.com/johndcarmichael/distributed-systems-cache/compare/1.12.0...1.14.0)
 - Docs and dependency updates

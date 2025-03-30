@@ -1,9 +1,9 @@
-import { DistributedSystemsCache } from '@/DistributedSystemsCache';
-import connect from 'async-redis-shared/connect';
-import client from 'async-redis-shared';
+import { DistributedSystemsCache } from './DistributedSystemsCache';
+import { connect, disconnect, getClient } from 'redis-singleton';
 
 export {
   DistributedSystemsCache,
   connect,
-  client
+  disconnect,
+  getClient
 };

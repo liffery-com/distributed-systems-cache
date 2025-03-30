@@ -7,5 +7,5 @@ __tests__
 githooks
 coverage
 test_swagger.yml
-src
 .github
+src

@@ -1,4 +1,4 @@
-import client from 'async-redis-shared';
+import { getClient } from 'redis-singleton';
 import ms from 'ms';
 
 export interface IDistributedSystemsCache {
@@ -110,7 +110,7 @@ export class DistributedSystemsCache<T> {
     }
   }
 
-  logger (msg: string, toLog: Record<any, any>): void {
+  logger (msg: string, toLog: any): void {
     if (this.verboseLog) {
       console.log(`${this.cacheKeyPrefix}: ${msg}`, toLog);
     }
@@ -158,11 +158,12 @@ export class DistributedSystemsCache<T> {
     if (this.cacheSetFilter) {
       cacheObject = this.cacheSetFilter(cacheObject);
     }
-    await client().setJson(
+    await getClient().setJson(
       this.makeKey(cacheKey),
-      Object.assign(cacheObject, {
+      {
+        ...cacheObject,
         updatedAt: new Date().getTime(),
-      })
+      }
     );
     this.logger('setCache', cacheObject);
   }
@@ -177,7 +178,7 @@ export class DistributedSystemsCache<T> {
   async getCache (cacheKey: string, fetchAttempt = 0): Promise<T | undefined> {
     this.logger('getCache called', { cacheKey });
 
-    const json: T & { updatedAt: number } = await client().getJson(this.makeKey(cacheKey));
+    const json: T & { updatedAt: number } = await getClient().getJson(this.makeKey(cacheKey));
     if (!json) {
       this.logger('getCache null', { cacheKey, fetchAttempt });
       if (this.cachePopulatorMaxTries <= fetchAttempt || this.cachePopulatorDelete) {
@@ -212,14 +213,14 @@ export class DistributedSystemsCache<T> {
    * Simple get all for this prefix
    */
   getAll (): Promise<any> {
-    return client().keys(this.cacheKeyPrefix + '*');
+    return getClient().keys(this.cacheKeyPrefix + '*');
   }
 
   /**
    * Simple clear 1 record under this prefix
    */
-  clearCacheRecord (cacheKey: string): Promise<boolean> {
-    return client().del(this.makeKey(cacheKey));
+  clearCacheRecord (cacheKey: string): Promise<number> {
+    return getClient().del(this.makeKey(cacheKey));
   }
 
   /**
@@ -228,7 +229,7 @@ export class DistributedSystemsCache<T> {
   async clearAllCacheRecords (): Promise<void> {
     const keys = await this.getAll();
     for (let i = 0; i < keys.length; i++) {
-      await client().del(keys[i]);
+      await getClient().del(keys[i]);
     }
   }
 }

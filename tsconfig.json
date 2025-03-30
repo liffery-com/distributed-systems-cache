@@ -1,49 +1,19 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "target": "ES2020",
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
     "esModuleInterop": true,
-    "target": "ES2017",
-    "moduleResolution": "node",
-    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
     "sourceMap": true,
-    "outDir": "build",
-    "baseUrl": "./",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "importHelpers": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "paths": {
-      "@constants": [
-        "src/constants"
-      ],
-      "@database": [
-        "src/database"
-      ],
-      "@domains": [
-        "src/domains"
-      ],
-      "@http": [
-        "src/http"
-      ],
-      "@services": [
-        "src/services"
-      ],
-      "@utils": [
-        "src/utils"
-      ],
-      "@/*": [
-        "src/*"
-      ]
-    },
-    "plugins": [
-      {
-        "transform": "@zerollup/ts-transform-paths",
-        "exclude": ["*"]
-      }
-    ]
+    "baseUrl": "."
   },
-  "exclude": [
-    "package.json"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/__tests__"]
 }
