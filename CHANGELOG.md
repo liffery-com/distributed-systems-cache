@@ -22,6 +22,9 @@ All notable changes to this project will be documented in this file. Dates are d
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
+#### 2.0.1
+- Typo: package json file main and type folder
+
 #### 2.0.0
 - Moved to [`redis-singleton`](https://www.npmjs.com/package/redis-singleton) which uses the latest npm redis client
 - Test updated to reflect the small changes seen in the latest redis client
