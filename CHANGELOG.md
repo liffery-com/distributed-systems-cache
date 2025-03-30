@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Dates are d
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
+- [2.0.1](#201)
 - [2.0.0](#200)
 - [1.14.0](#1140)
 - [1.12.0](#1120)
